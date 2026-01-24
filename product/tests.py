@@ -1,91 +1,134 @@
 from django.test import TestCase
-from .models import Product
-from .serializers import ProductSerializer
+from rest_framework.test import APITestCase
+from rest_framework import status
+from django.urls import reverse
+from .models import Category, Product
+
+
+class CategoryModelTest(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(
+            name="Ficção",
+            description="Livros de ficção"
+        )
+    
+    def test_category_creation(self):
+        self.assertEqual(self.category.name, "Ficção")
+        self.assertEqual(str(self.category), "Ficção")
+
 
 class ProductModelTest(TestCase):
-    """Testes para o modelo Product"""
+    def setUp(self):
+        self.category = Category.objects.create(name="Romance")
+        self.product = Product.objects.create(
+            title="Dom Casmurro",
+            author="Machado de Assis",
+            price=29.90,
+            category=self.category,
+            stock=10
+        )
+    
+    def test_product_creation(self):
+        self.assertEqual(self.product.title, "Dom Casmurro")
+        self.assertEqual(self.product.price, 29.90)
+
+
+class CategoryAPITest(APITestCase):
+    def setUp(self):
+        self.category_data = {
+            'name': 'Aventura',
+            'description': 'Livros de aventura'
+        }
+    
+    def test_create_category(self):
+        url = reverse('category-list')
+        response = self.client.post(url, self.category_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Category.objects.count(), 1)
+        self.assertEqual(Category.objects.get().name, 'Aventura')
+    
+    def test_get_categories(self):
+        Category.objects.create(**self.category_data)
+        url = reverse('category-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+    
+    def test_update_category(self):
+        category = Category.objects.create(**self.category_data)
+        url = reverse('category-detail', kwargs={'pk': category.pk})
+        updated_data = {'name': 'Ação', 'description': 'Livros de ação'}
+        response = self.client.put(url, updated_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        category.refresh_from_db()
+        self.assertEqual(category.name, 'Ação')
+    
+    def test_delete_category(self):
+        category = Category.objects.create(**self.category_data)
+        url = reverse('category-detail', kwargs={'pk': category.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Category.objects.count(), 0)
+
+
+class ProductAPITest(APITestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Terror')
+        self.product_data = {
+            'title': 'It - A Coisa',
+            'author': 'Stephen King',
+            'price': 45.00,
+            'category': self.category.id,
+            'stock': 5
+        }
     
     def test_create_product(self):
-        """Testa a criação básica de um produto"""
-        product = Product.objects.create(
-            name="Livro de Django",
-            price=89.90,
-            description="Um livro sobre Django",
-            stock=50
+        url = reverse('product-list')
+        response = self.client.post(url, self.product_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Product.objects.count(), 1)
+    
+    def test_get_products(self):
+        Product.objects.create(
+            title='It',
+            author='Stephen King',
+            price=45.00,
+            category=self.category,
+            stock=5
         )
-        self.assertEqual(product.name, "Livro de Django")
-        self.assertEqual(float(product.price), 89.90)
-        self.assertEqual(product.stock, 50)
-        self.assertIsNotNone(product.created_at)
+        url = reverse('product-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
     
-    def test_product_string_representation(self):
-        """Testa a representação em string do produto"""
-        product = Product.objects.create(name="Produto Teste", price=10.00)
-        self.assertEqual(str(product), "Produto Teste")
-
-class ProductSerializerTest(TestCase):
-    """Testes para o serializer de Product"""
-    
-    def test_serializer_with_valid_data(self):
-        """Testa serializer com dados válidos"""
-        data = {
-            'name': 'Novo Produto',
-            'price': 99.99,
-            'description': 'Descrição do produto',
-            'stock': 25
-        }
-        serializer = ProductSerializer(data=data)
-        self.assertTrue(serializer.is_valid(), f"Erros: {serializer.errors}")
-        
-        # Salva o produto
-        product = serializer.save()
-        self.assertEqual(product.name, 'Novo Produto')
-        self.assertEqual(product.stock, 25)
-    
-    def test_serializer_invalid_price(self):
-        """Testa preço negativo no serializer"""
-        data = {
-            'name': 'Produto Inválido',
-            'price': -5.00,
-            'stock': 10
-        }
-        serializer = ProductSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('price', serializer.errors)
-    
-    def test_serializer_in_stock_field(self):
-        """Testa o campo calculado in_stock"""
-        product = Product.objects.create(name="Teste", price=10.00, stock=5)
-        serializer = ProductSerializer(product)
-        
-        # Verifica se o campo 'in_stock' existe
-        self.assertIn('in_stock', serializer.data)
-        self.assertTrue(serializer.data['in_stock'])
-        
-        # Testa sem estoque
-        product.stock = 0
-        product.save()
-        serializer = ProductSerializer(product)
-        self.assertFalse(serializer.data['in_stock'])
-    
-    def test_serializer_price_with_tax_field(self):
-        """Testa se o campo price_with_tax existe e calcula corretamente"""
-        product = Product.objects.create(name="Teste", price=100.00, stock=10)
-        serializer = ProductSerializer(product)
-        
-        # Primeiro verifica se o campo existe
-        self.assertIn('price_with_tax', serializer.data)
-        
-        # Preço com 10% de imposto
-        expected_price = 110.00
-        self.assertAlmostEqual(serializer.data['price_with_tax'], expected_price, places=2)
-    
-    def test_serializer_missing_required_field(self):
-        """Testa serializer sem campo obrigatório"""
-        data = {
+    def test_update_product(self):
+        product = Product.objects.create(
+            title='It',
+            author='Stephen King',
+            price=45.00,
+            category=self.category,
+            stock=5
+        )
+        url = reverse('product-detail', kwargs={'pk': product.pk})
+        updated_data = {
+            'title': 'It - A Coisa',
+            'author': 'Stephen King',
             'price': 50.00,
+            'category': self.category.id,
             'stock': 10
         }
-        serializer = ProductSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('name', serializer.errors)
+        response = self.client.put(url, updated_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        product.refresh_from_db()
+        self.assertEqual(product.price, 50.00)
+    
+    def test_delete_product(self):
+        product = Product.objects.create(
+            title='It',
+            author='Stephen King',
+            price=45.00,
+            category=self.category,
+            stock=5
+        )
+        url = reverse('product-detail', kwargs={'pk': product.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
