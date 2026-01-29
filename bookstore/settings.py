@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'debug_toolbar',
+    'rest_framework.authtoken',
     
     # My apps
     'product',
@@ -132,7 +133,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Adicione no final do arquivo
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10  # Número de itens por página
+    'PAGE_SIZE': 10,  # Número de itens por página
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
 }
 INTERNAL_IPS = [
     '127.0.0.1',

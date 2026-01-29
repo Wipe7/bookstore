@@ -2,6 +2,7 @@ from django.test import TestCase
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
+from django.contrib.auth.models import User
 from .models import Order, OrderItem
 from product.models import Product, Category
 
@@ -20,6 +21,9 @@ class OrderModelTest(TestCase):
 
 class OrderAPITest(APITestCase):
     def setUp(self):
+        self.user = User.objects.create_user(username='will', password='testpass')
+        self.client.force_authenticate(user=self.user)
+        
         self.category = Category.objects.create(name='Ficção')
         self.product = Product.objects.create(
             title='1984',

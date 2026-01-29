@@ -2,9 +2,13 @@ from rest_framework import viewsets
 from bookstore.pagination import StandardResultsSetPagination
 from .models import Category, Product
 from .serializers import CategorySerializer, ProductSerializer
-
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 class CategoryViewSet(viewsets.ModelViewSet):
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [IsAuthenticated]
+
     """
     ViewSet para CRUD completo de Categorias
     """
@@ -14,6 +18,9 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
+    authentication_classes = [SessionAuthentication, BasicAuthentication, TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
     """
     ViewSet para CRUD completo de Produtos
     """
