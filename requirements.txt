@@ -1,0 +1,7 @@
+
+echo "Django>=4.2" > requirements.txt
+echo "djangorestframework>=3.14" >> requirements.txt
+echo "pytest>=7.0" >> requirements.txt
+echo "pytest-django>=4.5" >> requirements.txt
+
+pip install -r requirements.txt
