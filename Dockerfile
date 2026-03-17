@@ -1,4 +1,4 @@
-FROM python:3.12.1-slim as python-base
+FROM python:3.13-slim as python-base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -24,7 +24,7 @@ RUN apt-get update && apt-get -y install libpq-dev gcc && pip install psycopg2
 WORKDIR $PYSETUP_PATH
 COPY poetry.lock pyproject.toml ./
 
-RUN poetry install
+RUN poetry install --no-root
 
 WORKDIR /app
 COPY . /app/
