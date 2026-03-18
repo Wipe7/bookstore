@@ -1,0 +1,60 @@
+name: CI - Bookstore
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'integracao/**'
+      - 'configuracao/**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  testes:
+    name: Rodar testes
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: bookstore
+          POSTGRES_USER: bookstore_user
+          POSTGRES_PASSWORD: bookstore_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_NAME: bookstore
+      DB_USER: bookstore_user
+      DB_PASSWORD: bookstore_pass
+      DB_HOST: localhost
+      DB_PORT: 5432
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Instalar Poetry
+        run: pip install poetry
+
+      - name: Instalar dependências
+        run: poetry install --no-root
+
+      - name: Rodar migrações
+        run: poetry run python manage.py migrate
+
+      - name: Rodar testes
+        run: poetry run python manage.py test
